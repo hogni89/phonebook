@@ -1,19 +1,19 @@
-<?php 
-	$siteNumber = $_GET['sitenumber'];
-	$resultsOnPage = 0;
-?>
+
 <html>
 	<head>
+		<title>nummar.fo</title>
 		<meta content="text/html"; charset="iso-8859-1" http-equiv="Content-Type" />
 	</head>
 	<body>
 
 <?php
    	
-   	// Hetta verdur brúkt til at leita á nummar.fo
+   	//Used to search nummar.fo
    	include "simple_html_dom.php";
+   	//Get search string
    	$nameToSearch = str_replace(" ", "+", $_GET['s']);
    	
+   	//fetch site number 1s
    	if($siteNumber == null) {
    		$html = file_get_html('http://nummar.fo/?s='.$nameToSearch);
    		$siteNumber = 1;
@@ -32,12 +32,77 @@
    		} 
    	}
    	*/
+   	
+   	
+   	/*
+   	* Result class. 
+   	* Each object of this class holds a phone record
+   	*/
+   	class Result 
+   	{
+	 	private $name;
+	 	private $phone;
+	 	private $address;
+	 	private $mobile;
+	
+	 	public function __construct($name, $phone, $address, $mobile) 
+	 	{
+		 	$this->name 	= $name;
+		 	$this->phone 	= $phone;
+		 	$this->address 	= $address;
+		 	$this->mobile	= $mobile;
+	 	}
+   	}
    		
-   	// Nøgdin av funnum leitiúrtslitum
-   	$nogd = substr((utf8_decode($searchResult)), 30,12);
-   	echo "<span class='graytitle'>".$nogd."</span>";
+	//Array holding Result objects   	
+   	$resultArr = array();
    	
-   	
+   	$doContinue = true;
+   	while($doContinue) 
+   	{
+	   	foreach($html->find('div[class=mdCardData]') as $key => $info) 
+	   	{
+	   		$name;
+	   		$phone;
+	   		$address;
+			$type;
+				   		
+	   		//Fetch name
+	   		foreach($info->find('h2[class=fn n]') as $key => $info_name)
+	   		{
+	   			$name = (utf8_decode($info_name->plaintext));
+	   		}
+	   		
+	   		//Fetch address
+	   		foreach($info->find('address[class=adr]') as $key => $info_address) 
+	   		{
+				$address = (utf8_decode($info_address->plaintext));
+			}	   		   		
+
+			//Fetch phonenumber
+			foreach($info->find('p[class=tel]') as $key => $info_phone) 
+			{
+				$info_phone = ($info_phone->plaintext);
+				$info_type = substr($info_phone, 13, 4);
+				
+				$numberWithSpaces = substr($info_phone, -15);
+				$phone = "+298 ".substr($numberWithSpaces, 0, 10);
+							
+				if($info_type == "Fart") 
+				{			
+					$mobile = true;
+				}
+				else 
+				{
+					$mobile = false;
+				}
+			}
+			//Add result to ResultArray
+			$resultArr[] = new Result($name, $phone, $address, $mobile);
+	   	}
+	   	
+	   	$doContinue = false;
+   	}
    		   	
    	// Hetta verdur brúkt til at skriva alt út vid
    	foreach($html->find('div[class=mdCardData]') as $key => $info) {
@@ -107,5 +172,6 @@
 			<p>Kelda: nummar.fo - FøroyaTele</p><p>BS Tøkni sp/f, El-arbeiði og bókhald</p>	
 			<p>Vitja okkara heimasíðu á <a href="http://www.bstokni.fo">bstokni.fo</a></p>
 		</div>
+		
 	</body>
 </html>
